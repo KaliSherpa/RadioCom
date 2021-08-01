@@ -1,10 +1,25 @@
 from string import ascii_letters, digits
 from base64 import b64encode, b64decode
+from threading import Thread
 from scipy.io import wavfile
+from time import sleep
 import numpy as np
 import winsound
 
-text_tones = {l:t*100+1000 for t, l in enumerate(ascii_letters + digits + '+/=')}
+text_tones = {l:t*50+300 for t, l in enumerate(ascii_letters + digits + '+/=')}
+tone_delay = 0.1
+
+def message(text, delay):
+    text = b64encode(text.encode()).decode()
+    current = ''
+    for char in text:
+        current += char
+        try:
+            print('\r' + b64decode(current.encode()).decode(), end='', flush=True)
+        except:
+            print('█', end='', flush=True)
+        sleep(delay)
+    print()
 
 def combine(*arrays):
     out = []
@@ -12,7 +27,7 @@ def combine(*arrays):
         out += list(array)
     return np.array(out)
 
-def get_sine_wave(frequency, duration=0.1, sample_rate=44100, amplitude=4096):
+def get_sine_wave(frequency, duration=tone_delay, sample_rate=44100, amplitude=4096):
     t = np.linspace(0, duration, int(sample_rate*duration))
     wave = amplitude*np.sin(2*np.pi*frequency*t)
     return wave
@@ -34,5 +49,8 @@ def tone_encode(data):
     return pattern(*tuple(tones))
 
 while True:
-    wavfile.write('temp_file.wav', rate=44100, data=tone_encode(input('> ')).astype(np.int16))
-    winsound.PlaySound('temp_file.wav', winsound.SND_FILENAME)
+    text = input('> ')
+    wavfile.write('temp_file.wav', rate=44100, data=tone_encode(text).astype(np.int16))
+    Thread(target=winsound.PlaySound, args=('temp_file.wav', winsound.SND_FILENAME)).start()
+    sleep(0.3)
+    message(text, tone_delay)
